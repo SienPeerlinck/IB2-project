@@ -1,28 +1,20 @@
-#include <Arduino.h>
-#include "Segmentdriver.h"
+#include <arduino.h>
 
-Segmentdriver seg1(0x3A);
-Segmentdriver seg2(0x39);
-
-uint8_t var1 = 0;
-uint8_t var2 = 0;
-
-void setup(){
-  seg1.init();
-  seg2.init();
+void setup() {
+  // put your setup code here, to run once:
+  SerialUSB.begin(9600);
+  pinMode(16, INPUT);
 }
 
-void loop(){
-  seg1.write_value(var1);
-  seg2.write_value(var2);
-  delay(500);
-  var2++;
-  if (var2 > 9){
-    var2=0;
-    var1++;
-    if (var1 > 9){
-      var1=0;
-      var2=0;
-    }
+void loop() {
+  // put your main code here, to run repeatedly:
+  int i = 1;
+  if(digitalRead(16)==LOW){
+    SerialUSB.print(i);
+    SerialUSB.println(" : Hello World");
+    i++;
+    // delay(500);
   }
+
+  
 }
