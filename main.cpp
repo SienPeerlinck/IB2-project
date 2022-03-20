@@ -1,15 +1,22 @@
 #include <arduino.h>
-#include <iostream>
+#include <string.h>
 
 void setup() {
-	SerialUSB.begin(9600);
+  // put your setup code here, to run once:
+  SerialUSB.begin(9600);
+  pinMode(13, OUTPUT);
 }
+
 void loop() {
-	if(SerialUSB.available() > 0) {
-		char data = SerialUSB.read();
-		char str[2];
-		str[0] = data;
-		str[1] = '\0';
-		SerialUSB.print(str);
-	}
+  // see if there's incoming serial data:
+  if (SerialUSB.available() > 0) {
+    // read the oldest byte in the serial buffer:
+    int data = SerialUSB.read();
+    SerialUSB.print(data);
+    if(data == byte(0)){
+        digitalWrite(13, HIGH);
+    }
+    delay(500);
+    digitalWrite(13, LOW);
+  };
 }
