@@ -18,6 +18,13 @@ void setup() {
   // Keyboard.release(KEY_P);
   // Keyboard.release(KEY_UP_ARROW);
   SerialUSB.begin(9600);
+  while (!SerialUSB) delay(10);
+  if (!mpu.begin()) {
+    // SerialUSB.println("Failed to find MPU6050 chip");
+    while (1) {
+      delay(10);
+    }
+  }
   // Grenswaarden geluidssensor berekenen
   // int *waarden = getGeluidswaarden();
   // int mean = getGemiddelde(waarden);
@@ -68,35 +75,36 @@ void loop() {
   // SerialUSB.println (val); //print geluidswaarde
   if(val<520 || val>560){
     // Keyboard.press(KEY_P);
-    SerialUSB.println('G1');
+    SerialUSB.println("G1");
     delay(100);
     // Keyboard.release(KEY_P);
     // SerialUSB.println(0);
   }
   else{
-    SerialUSB.println('G0');
+    SerialUSB.println("G0");
     // Keyboard.release(KEY_P);
   }
   // Button op sensor slot 1 --> key up --> Vooruitgaan
   while(digitalRead(14)==LOW){
-    SerialUSB.println('B2');
+    SerialUSB.println("B2");
     digitalWrite(6, HIGH);
     delay(500);
     // break;
   }
   if(digitalRead(14)==HIGH){ //key-pressed
-    SerialUSB.println('B7');
+    SerialUSB.println("B7");
     digitalWrite(6, LOW);
     // delay(500);
     // Keyboard.press(KEY_UP_ARROW);
   }
   if(digitalRead(4)==LOW){ //key-pressed
-    SerialUSB.println('T1');
+    SerialUSB.println("T1");
   }
   if(digitalRead(4)==HIGH){ //key-pressed
-    SerialUSB.println('T4');
+    SerialUSB.println("T4");
   }
-  /////////////////////////////////
+
+  ///////////////////////////////////////////////
   // if(digitalRead(14)==LOW){ //key-pressed
   //   SerialUSB.println('2');
   //   digitalWrite(6, HIGH);
@@ -108,20 +116,22 @@ void loop() {
   //   digitalWrite(6, LOW);
   //   // Keyboard.release(KEY_UP_ARROW);
   // }
-    // see if there's incoming serial data:
+  ///////////////////////////////////////////////
+
+  // see if there's incoming serial data:
   if (SerialUSB.available() > 0) {
     // read the oldest byte in the serial buffer:
     int data = SerialUSB.read();
     // ontvangt als door portal --> vibrator 1 trilt
-    // if(data ==byte('116')){
-    //     digitalWrite(12, HIGH);
-    // }
-    // delay(100);
+    if(data ==byte('116')){
+        digitalWrite(12, HIGH);
+    }
+    delay(100);
     digitalWrite(12, LOW);
     //// ontvangt als iets oprapen --> buzzer piept (kort)
-    // if(data == byte('98')){
-    //   digitalWrite(2, HIGH);
-    // }
+    if(data == byte('98')){
+      digitalWrite(2, HIGH);
+    }
     delay(50);
     digitalWrite(2, LOW);
     // delay(500);
