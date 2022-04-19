@@ -75,11 +75,11 @@ void loop() {
   }
   if(digitalRead(14)==LOW){
     
-    SerialUSB.println('3');
+    SerialUSB.println('2');
     // Keyboard.press(KEY_UP_ARROW);
   }
   else{
-    SerialUSB.println('2');
+    SerialUSB.println('3');
   //   // Keyboard.release(KEY_UP_ARROW);
   }
     // see if there's incoming serial data:
