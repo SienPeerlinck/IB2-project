@@ -855,7 +855,8 @@ def main():
     while not moet_afsluiten:
 
         data = ser.readline().decode().strip()
-        # print(data)
+        print(data)
+        # try:
         if data == "G1":
             p_pressed = True
         elif data == "G0":
@@ -864,32 +865,11 @@ def main():
             key_up = True
         elif data == "B7":
             key_up = False
-        elif data[0] == "D":
-            print(data)
+        elif data != "" and data[0] == "D":
+            # print(data)
             data2 = data[1:]
-            print(data2)
+            # print(data2)
             mousemovement(float(data2))
-
-        # try: getal = int(data)
-        # except:
-        #     # print("no int")
-        #     getal = 0
-        # print(data)
-        # # print(key_up)
-        # if getal == 10:
-        #     p_pressed = True
-        # elif getal == 40:
-        #     p_pressed = False
-        # elif getal == 20:
-        #     key_up = True
-        #     # print(key_up)
-        # elif getal == 30:
-        #     key_up = False
-        # else:
-        #     try:
-        #         mousemovement(float(data))
-        #     except:
-        #         print("No float:", data)
 
 
         # Onthoud de huidige tijd
