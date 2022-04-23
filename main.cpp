@@ -1,65 +1,3 @@
-// //Door foutmelding moest ik adafruit busio installeren als library
-// //SPI moest ik volgens het internet includen, omdat ik bepaalde foutmelding kreeg
-
-// #include <SPI.h>
-// #include <iostream>
-// #include <Arduino.h>
-// #include "HID-Project.h"
-// #include <math.h>
-// #include "Wire.h"
-// #include <Adafruit_MPU6050.h>
-// #include <Adafruit_sensor.h>
-// #include "SparkFun_VCNL4040_Arduino_Library.h"
-// Adafruit_MPU6050 mpu;
-// VCNL4040 proximitySensor;
-// bool up_gedrukt = false;
-// bool down_gedrukt = false;
-// bool right_gedrukt = false;
-// bool left_gedrukt = false;
-// unsigned long tijd1;
-// unsigned long vorige_tijd1;
-// unsigned long delta_tijd1;
-// uint8_t data;
-// void setup() {
-//   vorige_tijd1 = millis();
-//   Wire.begin();
- 
-//   pinMode(14, INPUT_PULLUP);// sensor slot 1
-//   pinMode(15, INPUT_PULLUP);//2
-//   pinMode(16, INPUT_PULLUP);//3
-//   pinMode(17, INPUT_PULLUP);//4
-//   pinMode(18, INPUT);       //5
-//   pinMode(19, INPUT);       //6
-//   pinMode(4, INPUT_PULLUP); //7
-//   pinMode(3, INPUT);        //8
-//   pinMode(12, OUTPUT);
-//   pinMode(2, OUTPUT);       //gpio buzzer
-
-//   SerialUSB.begin(9600);
-  
-// }
-
-// void loop() {
-  
-//     // see if there's incoming serial data:
-//   if (SerialUSB.available() > 0) {
-//     data = SerialUSB.read();
-//     if(data == 48){
-//       digitalWrite(2, HIGH);
-//       delay(1000);
-//       digitalWrite(2, LOW);
-//     }
-//   };
-// }
-
-
-
-
-
-
-
-
-
 //Door foutmelding moest ik adafruit busio installeren als library
 //dan moest ik SPI volgens het internet includen, omdat ik nog een andere bepaalde foutmelding kreeg
 
@@ -268,6 +206,13 @@ void loop() {
 
     // see if there's incoming serial data:
   if (SerialUSB.available() > 0) {
+   
+    // !!!
+   
+    // DE DATA DIE IN PYTHON IS DOORGESTUURD VERANDERD VAN DECIMAAL NAAR UTF8, CONVERSIE KAN JE OP VOLGENDE SITE DOEN:
+    // https://onlineutf8tools.com/convert-utf8-to-decimal
+   
+    
     // read the oldest byte in the serial buffer:
     data = SerialUSB.read();
 
