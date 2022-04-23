@@ -50,4 +50,3 @@ void Segmentdriver::write_value(u_int8_t val_byte){
     }
     
 }
-
