@@ -12,7 +12,8 @@ To Do:
 
 - probleem inertual measurement unit - vibrator
 - tone luider?
-- settings interial measurement unit
+- settings interial measurement unit => smoother
 - buzzer laten afgaan bij game over
 - begin - uitleg knopjes
 - verder gaan na levelscherm met touch sensor/endscreen
+- wereld kleiner maken en lagere sensitivity en trager wandelen --> smoother
