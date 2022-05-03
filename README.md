@@ -7,6 +7,12 @@ DE DATA DIE IN PYTHON IS DOORGESTUURD VERANDERD VAN DECIMAAL NAAR UTF8, CONVERSI
 https://onlineutf8tools.com/convert-utf8-to-decimal
 
 To Do:
-- 7-segment display --> 26/04
 - Filmpje maken --> 15/05
 - presentatie demo --> 26/04
+
+- probleem inertual measurement unit - vibrator
+- tone luider?
+- settings interial measurement unit
+- buzzer laten afgaan bij game over
+- begin - uitleg knopjes
+- verder gaan na levelscherm met touch sensor/endscreen
