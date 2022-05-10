@@ -9,9 +9,8 @@ from sdl2.ext.compat import byteify
 from sdl2.sdlmixer import *
 import csv
 import serial
-# import arduinoComms
 
-ser = serial.Serial('COM6', 9600, timeout=.1)
+ser = serial.Serial('COM6', 9600, timeout=0, writeTimeout=0)
 ser.close()
 ser.open()
 
@@ -27,7 +26,6 @@ hoogte_sprite = 0.5
 #
 # Globale variabelen
 #
-
 # variabelen voor inventory
 inventory = []  # inventory begint als lege lijst
 p_pressed = False
@@ -35,8 +33,12 @@ spacebar_pressed = False
 inventory_bekijken = False
 key_m = False
 key_up = False
-virtualmouse = 0
-virutalmousemotion = True
+key_down = False
+key_right = False
+key_left = False
+detectie_geluid = False
+touch = False
+proximity = 1
 
 # positie van de speler
 p_speler = np.array([2.0, 2.0])
@@ -58,6 +60,7 @@ foto_x = 0
 gesneden_blok = np.array([0, 0])
 
 level = 1  # welk level we in zitten
+ser.write(b'H')  #72 - level1
 key_x = False
 nameEntry = True
 nameEntryText = ""
@@ -116,14 +119,21 @@ def verwerk_input():
     global spacebar_pressed
     global inventory_bekijken
     global key_up
-    global virtualmouse
-    global virtualmousemotion
+    global key_down
+    global key_right
+    global key_left
+    global detectie_geluid
+    global proximity
+    global touch
 
     # Handelt alle input events af die zich voorgedaan hebben sinds de vorige
     # keer dat we de sdl2.ext.get_events() functie hebben opgeroepen
-
+    # print(proximity)
     # Beweging met knop op controller
-    speed = 0.25
+    if(proximity > 3):  #pas 25
+        proximity = 25 # max snelheid
+    speed = proximity*(0.35/25) #waarde 60 is afstand waar max snelheid van 0.4 is
+    # speed = 1/speed
     if key_up:
         if world_map[round(np.floor(p_speler[1] + speed * r_speler[1]))] \
                 [round(np.floor(p_speler[0] + speed * r_speler[0]))] == 0:
@@ -133,6 +143,30 @@ def verwerk_input():
             p_speler[1] += speed * r_speler[1] / 2  # bewegen langs muur volgens y-coordinaat
         elif world_map[round(r_speler[1])][round(np.floor(p_speler[0] + speed * r_speler[0]))] == 0:
             p_speler[0] += speed * r_speler[0] / 2  # bewegen langs muur volgens x-coordinaat
+    if key_down:
+        if world_map[round(np.floor(p_speler[1] - speed * r_speler[1]))][
+            round(np.floor(p_speler[0] - speed * r_speler[0]))] == 0:
+            p_speler[0] -= speed * r_speler[0]
+            p_speler[1] -= speed * r_speler[1]
+    if key_right:
+        if world_map[round(np.floor(p_speler[1] + speed * r_speler[0]))][
+            round(np.floor(p_speler[0] - speed * r_speler[1]))] == 0:
+            p_speler[0] -= speed * r_speler[1]
+            p_speler[1] += speed * r_speler[0]
+            #print("testrechts")
+    if key_left:
+        if world_map[round(np.floor(p_speler[1] - speed * r_speler[0]))][
+            round(np.floor(p_speler[0] + speed * r_speler[1]))] == 0:
+            p_speler[0] += speed * r_speler[1]
+            p_speler[1] -= speed * r_speler[0]
+            #print("testlins")
+    if detectie_geluid:
+        p_pressed = True
+        detectie_geluid = False
+    if touch:
+        inventory_bekijken = not inventory_bekijken
+        touch = False
+
 
     events = sdl2.ext.get_events()
     for event in events:
@@ -220,7 +254,7 @@ def verwerk_input():
                     moet_afsluiten = True
                 elif key == sdl2.SDLK_UP:  # or key == sdl2.SDLK_UP
                     if world_map[round(np.floor(p_speler[1] + speed * r_speler[1]))] \
-                        [round(np.floor(p_speler[0] + speed * r_speler[0]))] == 0:
+                            [round(np.floor(p_speler[0] + speed * r_speler[0]))] == 0:
                         p_speler[0] += speed * r_speler[0]
                         p_speler[1] += speed * r_speler[1]
                         continue
@@ -258,6 +292,7 @@ def verwerk_input():
                     spacebar_pressed = True
                 break
 
+
             elif event.type == sdl2.SDL_KEYUP:  # toets loslaten
                 # key = event.key.keysym.sym
                 if key == sdl2.SDLK_p:
@@ -285,20 +320,10 @@ def verwerk_input():
                 # X-as
                 beweging = event.motion.xrel
                 a = 0.00125 * beweging
-                print("beweging:", a)
                 r_speler_rot = np.array([r_speler[0], r_speler[1]])
                 r_rot = np.array([[np.cos(a), np.sin(a)], [-np.sin(a), np.cos(a)]])
                 r_speler = np.matmul(r_speler_rot, r_rot)
                 continue
-            # elif virutalmousemotion:
-            #     beweging = virtualmouse
-            #     print("heeey")
-            #     a = 0.00125 * beweging
-            #     r_speler_rot = np.array([r_speler[0], r_speler[1]])
-            #     r_rot = np.array([[np.cos(a), np.sin(a)], [-np.sin(a), np.cos(a)]])
-            #     r_speler = np.matmul(r_speler_rot, r_rot)
-            #     continue
-
 
     # Polling-gebaseerde input. Dit gebruiken we bij voorkeur om bv het ingedrukt
     # houden van toetsen zo accuraat mogelijk te detecteren
@@ -309,14 +334,6 @@ def verwerk_input():
 
     if key_states[sdl2.SDL_SCANCODE_ESCAPE]:
         moet_afsluiten = True
-
-def mousemovement(vmouse):
-    global r_speler
-    beweging = vmouse
-    a = - 0.125 * beweging
-    r_speler_rot = np.array([r_speler[0], r_speler[1]])
-    r_rot = np.array([[np.cos(a), np.sin(a)], [-np.sin(a), np.cos(a)]])
-    r_speler = np.matmul(r_speler_rot, r_rot)
 
 
 def bereken_r_straal(r_speler, kolom):
@@ -455,14 +472,14 @@ def render_sprites(renderer, kolom, d_muur, sprites_im, sprites_bool, sprites_so
         j = int(sprites_sort[i])
         if sprites_bool[j]:
             if p_sprite_camco[i][1] >= 0 and d_muur > afstand[i] and -1 < p_sprite_camco2[i][0] < 1:
-                breedte_sprite_scherm = int(breedte_sprite * 800 / afstand[i])
+                breedte_sprite_scherm = int(breedte_sprite * BREEDTE / afstand[i])
                 x1_src = int((kolom - ((p_sprite_camco2[i][0] + 1) / 2 * BREEDTE - breedte_sprite_scherm / 2)) * (
                         afstand[i] / 4))
                 y2_src = sprites_im[j].size[1]
                 x1_dest = kolom
                 y1_dest = int(
-                    (math.floor((HOOGTE / 2) - ((HOOGTE / 2) / afstand[i])) + (1 - breedte_sprite) * 600 / afstand[i]))
-                y2_dest = int(hoogte_sprite * 600 / afstand[i])
+                    (math.floor((HOOGTE / 2) - ((HOOGTE / 2) / afstand[i])) + (1 - breedte_sprite) * HOOGTE / afstand[i]))
+                y2_dest = int(hoogte_sprite * HOOGTE / afstand[i])
                 renderer.copy(sprites_im[j], srcrect=(x1_src, 0, 1, y2_src), dstrect=(x1_dest, y1_dest, 1, y2_dest))
 
 
@@ -549,7 +566,6 @@ def schrijftop5(chars, charpath, renderer):
             schrijftekst(chars, charpath, f"{m} min {s} sec", 450, 275 + 45 * i, renderer, 1)
             i += 1
 
-
 def save_sboard(naam, timer):
     fieldnames = ['name', 'time']
     row = [{'name': naam, 'time': timer}]
@@ -576,8 +592,8 @@ def teken_life_bar(renderer):
     # renderer.fill tekent een rechthoekje (begin_x, begin_y, breedte, hoogte), kleur
     health_in_seconds = max_health - (time.time() - start_time_game)
     health = health_in_seconds / max_health * 100  # in procent
-    x_health = round(health * 8)  # in aantal pixels
-    renderer.fill((0, 598, 800, 2), sdl2.ext.Color(128, 128, 128, 20))
+    x_health = round(health * 8)  # in aantal pixels --> x_health gebruikt voor led array
+    renderer.fill((0, HOOGTE-2, BREEDTE, 2), sdl2.ext.Color(128, 128, 128, 20))
     if not flikkeren and health_in_seconds < 10:
         flikkeren = True
         start_flikker_tijd = time.time()
@@ -586,13 +602,27 @@ def teken_life_bar(renderer):
     if flikkeren:
         tijd_flikkeren_aan = time.time() - start_flikker_tijd
         if tijd_flikkeren_aan >= 0.35:
-            renderer.fill((0, 598, 800, 2), sdl2.ext.Color(255, 255, 255, 20))
+            renderer.fill((0, HOOGTE-2, BREEDTE, 2), sdl2.ext.Color(255, 255, 255, 20))
         if tijd_flikkeren_aan >= 0.7:
-            renderer.fill((0, 598, 800, 2), sdl2.ext.Color(128, 128, 128, 20))
+            renderer.fill((0, HOOGTE-2, BREEDTE, 2), sdl2.ext.Color(128, 128, 128, 20))
             start_flikker_tijd = time.time()
-    renderer.fill((0, 598, x_health, 2), sdl2.ext.Color(255, 50, 50, 20))
+    renderer.fill((0, HOOGTE-2, x_health, 2), sdl2.ext.Color(255, 50, 50, 20))
     if health_in_seconds <= 0:
         game_over = True
+    if(x_health>640):
+        ser.write(b'A') #65
+    elif (x_health>480):
+        ser.write(b'B') #66
+    elif (x_health > 320):
+        ser.write(b'C') #67
+    elif (x_health > 160):
+        ser.write(b'D') #68
+    elif (x_health > 100):
+        ser.write(b'E') #69
+    elif (x_health > 0):
+        ser.write(b'F') #f (70) is dus eventueel flikkeren
+    else:
+        ser.write(b'G') #leds af (71)
 
 
 def reset():
@@ -603,17 +633,21 @@ def reset():
     global level
     global game_over
     global key_x
+    global touch
     global p_sprite_worldco
     global sprites_bool
     global inventory
     global play_music
-    if key_x:
+    global proximity
+    if key_x or touch:
         game_over = False
         start_time_game = time.time()
         key_x = False
+        touch = False
         Mix_FadeOutChannel(2, 1000)
         play_music = True
     level = 1
+    ser.write(b'H')  #72 - level1
     world_map = pd.read_excel(r'World_map.xlsx', sheet_name='Level1').to_numpy(np.int8)
     p_speler = np.array([3.0, 3.0])
     flikkeren = True
@@ -659,6 +693,13 @@ def delete_from_inventory(item):
     index = inventory.index(item)
     del inventory[index]
 
+def mousemovement(vmouse):
+    global r_speler
+    beweging = vmouse
+    a = - 0.050 * beweging
+    r_speler_rot = np.array([r_speler[0], r_speler[1]])
+    r_rot = np.array([[np.cos(a), np.sin(a)], [-np.sin(a), np.cos(a)]])
+    r_speler = np.matmul(r_speler_rot, r_rot)
 
 def main():
     global resources
@@ -679,8 +720,12 @@ def main():
     global play_music
     global p_pressed
     global key_up
-    global virtualmouse
-    global virutalmousemotion
+    global key_down
+    global key_right
+    global key_left
+    global detectie_geluid
+    global proximity
+    global touch
     # Initialiseer de SDL2 bibliotheek
     sdl2.ext.init()
 
@@ -852,24 +897,61 @@ def main():
     eindespel = False
 
     # Blijf frames renderen tot we het signaal krijgen dat we moeten afsluiten
-    while not moet_afsluiten:
 
-        data = ser.readline().decode().strip()
-        print(data)
-        # try:
-        if data == "G1":
-            p_pressed = True
-        elif data == "G0":
-            p_pressed = False
-        elif data == "B2":
-            key_up = True
-        elif data == "B7":
-            key_up = False
-        elif data != "" and data[0] == "D":
-            # print(data)
-            data2 = data[1:]
-            # print(data2)
-            mousemovement(float(data2))
+    while not moet_afsluiten:
+        # hier telkens lijst maken met gegevens uit cpp
+        #   beginnend met 1 is een button (voor achter links en rechts), cijfer daarna is loslaten (even) of indrukken (oneven (bv 1))
+        #   -1 wilt zeggen dat het volgende proximity sensor data is
+        #   proximity van
+        inkomendeData = []
+        while ser.in_waiting:  # Or: while ser.inWaiting():
+            data = ser.readline().decode().strip()
+            inkomendeData.append(data)
+        # if(inkomendeData!=[]):
+        #     print(inkomendeData)
+
+        # Hier telkens alle data bekijken en behandelen
+        while(inkomendeData!=[]):
+            Element = inkomendeData[0]
+            if (Element == ''): # om fouten te voorkomen, mss overbodig?
+                Element = '0'
+            if (Element[0] == 'p'):
+                Element = Element[1:]
+                if (Element != ''):  # om fouten te voorkomen, mss overbodig?
+                    proximity = int(Element)
+                Element = '0'
+            if (Element[0] == 'a'):
+                Element = Element[1:]
+                #print(Element) #heel soms kan hij het elemnet niet omzetten naar een float daarom dat ik het uitprint moest het mislopen
+                if(len(Element) != 0  or Element != '-'):  #om fouten te voorkomen, mss overbodig?
+                    xy = float(Element)
+                else: xy = 0
+                if(xy < 0.1 and xy > -0.1):
+                    xy = 0
+                mousemovement(xy)
+                Element = '0'
+            if(Element == '11'):
+                key_up = True
+            if(Element == '12'):
+                key_up = False
+            if (Element == '13'):
+                key_right = True
+            if (Element == '14'):
+                key_right = False
+            if (Element == '15'):
+                key_down = True
+            if (Element == '16'):
+                key_down = False
+            if (Element == '17'):
+                key_left = True
+            if (Element == '18'):
+                key_left = False
+            if (Element == '21'):
+                detectie_geluid = True
+            if (Element == '19'):
+                touch = True
+
+            inkomendeData.pop(0)
 
 
         # Onthoud de huidige tijd
@@ -907,11 +989,11 @@ def main():
             teken_mini_map(renderer, p_speler)
         teken_life_bar(renderer)
         # timer
-        schrijf_timer(time, starttimer, 600, number_chars, number_charpath, renderer)
+        schrijf_timer(time, starttimer, HOOGTE, number_chars, number_charpath, renderer)
         # tekst
-        schrijftekst(chars, charpath, "Level: " + str(level), 10, 590, renderer, 0.5)
-        schrijftekst(chars, charpath, "Framerate: " + str(framerate), 330, 590, renderer, 0.5)
-        schrijftekst(chars, charpath, "Player: " + str(nameEntryText), 650, 590, renderer, 0.5)
+        schrijftekst(chars, charpath, "Level: " + str(level), 10, HOOGTE-10, renderer, 0.5)
+        schrijftekst(chars, charpath, "Framerate: " + str(framerate), int(BREEDTE*0.4125), HOOGTE-10, renderer, 0.5)
+        schrijftekst(chars, charpath, "Player: " + str(nameEntryText), int(BREEDTE*0.8125), HOOGTE-10, renderer, 0.5)
         # teken minisleutel
         teken_mini_sleutels(renderer, sprites_im, keywhite)
 
@@ -941,19 +1023,20 @@ def main():
                         sprites_bool[x] = False
                         if sprite == donut:
                             start_time_game += 25
-                            ser.write(b'98')
+                            ser.write(b'0')
                             if start_time_game > time.time():
                                 start_time_game = time.time()
                             delete_from_inventory(sprite)
                             Mix_PlayChannel(-1, eetgeluidje, 0)
                         elif sprite == kaart:
                             key_m = True
+                            ser.write(b'0')
                             Mix_PlayChannel(-1, pagina, 0)
                         else:
                             Mix_PlayChannel(-1, pickupsound, 0)
-                            ser.write(b'98')
+                            ser.write(b'0')
                 if int(1.5 * time.time()) % 2 == 0 and sprites_bool[x]:
-                    schrijftekst(chars, charpath, "Druk op P om vast te nemen", 130, 340, renderer, 1)
+                    schrijftekst(chars, charpath, "Roep iets om vast te nemen", 130, 340, renderer, 1)
 
         if inventory_bekijken:
             teken_inventory(renderer=renderer)
@@ -965,6 +1048,7 @@ def main():
                 p_speler = np.array([6.0, 12.0])
                 world_map = pd.read_excel(r'World_map.xlsx', sheet_name='Level2').to_numpy(np.int8)
                 level += 1
+                ser.write(b'I')  # 73 - level2
                 delete_from_inventory(keygold)
                 if kaart in inventory:
                     delete_from_inventory(kaart)
@@ -973,7 +1057,7 @@ def main():
                 key_m = False
                 start_time_game = time.time()
                 Mix_PlayChannel(-1, levelup, 0)
-                ser.write(b'116')
+                ser.write(b'1')
             else:
                 if int(1.5 * time.time()) % 2 == 0:
                     schrijftekst(chars, charpath, "Je hebt een sleutel nodig", 170, 340, renderer, 1)
@@ -986,6 +1070,7 @@ def main():
                 # r_speler = np.array([1 / math.sqrt(2), 1 / math.sqrt(2)])
                 world_map = pd.read_excel(r'World_map.xlsx', sheet_name='Level3').to_numpy(np.int8)
                 level += 1
+                ser.write(b'J')  # 74 - level3
                 delete_from_inventory(keygold)
                 delete_from_inventory(keysilver)
                 if kaart in inventory:
@@ -995,7 +1080,7 @@ def main():
                 key_m = False
                 start_time_game = time.time()
                 Mix_PlayChannel(-1, levelup, 0)
-                ser.write(b'116')
+                ser.write(b'1')
 
             else:
                 if int(1.5 * time.time()) % 2 == 0:
@@ -1013,7 +1098,7 @@ def main():
                 sort_sboard()
                 eindespel = True
                 inventory = []
-                ser.write(b'116')
+                ser.write(b'1')
             else:
                 if int(1.5 * time.time()) % 2 == 0 and not eindespel:
                     schrijftekst(chars, charpath, "Je hebt drie sleutels nodig", 170, 340, renderer, 1)
@@ -1032,8 +1117,13 @@ def main():
         delta = end_time - start_time
         framerate = round(1 / delta, 2)
 
+        p_pressed = False
+
+
+
         verwerk_input()
         window.refresh()
+
 
     # Sluit SDL2 af
     sdl2.ext.quit()
