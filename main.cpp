@@ -3,13 +3,14 @@
 
 #include <SPI.h>
 #include <Arduino.h>
-#include "HID-Project.h"
+// #include "HID-Project.h"
 #include <math.h>
 #include "Wire.h"
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_sensor.h>
 #include "SparkFun_VCNL4040_Arduino_Library.h"
 #include "Ioexpander.h"
+#include "Segmentdriver.h"
 #define I2C_ADDRESS 0x3B //led
 Ioexpander ioe(I2C_ADDRESS);
 Adafruit_MPU6050 mpu;
@@ -25,19 +26,32 @@ unsigned long delta_tijd1;
 unsigned long tijd2;
 unsigned long vorige_tijd2;
 unsigned long delta_tijd2;
+unsigned long tijd3;
+unsigned long vorige_tijd3;
+unsigned long delta_tijd3;
 uint8_t data;
 bool buzz;
 bool i = true;
 bool flikkeren = false;
+bool aftellen = false;
 int aantal_keer_60_ms = 0;
+Segmentdriver seg1(0x3A);
+Segmentdriver seg2(0x39);
+uint8_t char1 = 1;
+uint8_t char2 = 0;
+uint8_t level = 1;
 
 void setup() {
   ioe.init();
   ioe.set_conf_reg(0x00);
   ioe.set_out_reg(0x00);
 
+  seg1.init();
+  seg2.init();
+
   vorige_tijd1 = millis();
   vorige_tijd2 = millis();
+  vorige_tijd3 = millis();
   Wire.begin();
 
   pinMode(14, INPUT_PULLUP);// sensor slot 1
@@ -64,7 +78,7 @@ void setup() {
 
   if (proximitySensor.begin() == false)
   {
-    Serial.println("Device not found. Please check wiring.");
+    SerialUSB.println("Device not found. Please check wiring.");
     while (1); //Freeze!
   }
 
@@ -84,6 +98,8 @@ void setup() {
   } else {
     touch_gedrukt = true;
   }
+  seg1.write_value(17);
+  seg2.write_value(level);
 }
 
 void loop() {
@@ -92,8 +108,10 @@ void loop() {
 
   tijd1 = millis();
   tijd2 = millis();
+  tijd3 = millis();
   delta_tijd1 = tijd1 - vorige_tijd1;
   delta_tijd2 = tijd2 - vorige_tijd2;
+  delta_tijd3 = tijd3 - vorige_tijd3;
 
 
   //trillen buzzers 1 voor 1
@@ -192,7 +210,7 @@ void loop() {
     SerialUSB.println(18);
     left_gedrukt = false;
   }
-  if(digitalRead(24)==LOW && touch_gedrukt == false){ // LEFT
+  if(digitalRead(24)==LOW && touch_gedrukt == false){ // TOUCH
     SerialUSB.println(19);
     touch_gedrukt = true;
   }
@@ -216,11 +234,13 @@ void loop() {
     // read the oldest byte in the serial buffer:
     data = SerialUSB.read();
 
-    // ontvangt als door portal --> vibrator 1 trilt
+    // ontvangt als iets vastgenomen in de game -> buzzer
     if(data == 48){
         tone(2,10000,50);
+        // tone(2, 1, 500);
     }
 
+    // ontvangt als door portal --> vibrator 1 trilt
     if(data == 49){
         vorige_tijd2 = millis();
         buzz = true;
@@ -235,6 +255,10 @@ void loop() {
     if(data == 65) {
       ioe.set_out_reg(0xF8); //allemaal aan
       flikkeren = false;
+      char1 = 17;
+      char2 = level;
+      seg1.write_value(char1);
+      seg2.write_value(char2);
     }
     if(data == 66){
       ioe.set_out_reg(0xF0);
@@ -253,18 +277,51 @@ void loop() {
       flikkeren = false;
     }
     if(data == 70){
+      if (aftellen == false){
+        char1 = 1;
+        char2 = 6;
+      }
       flikkeren = true;
+      aftellen = true;
     }
     if(data == 71){
       ioe.set_out_reg(0x00);
       flikkeren = false;
     }
+    if(data == 72){
+      level = 1;
+    }
+    if(data == 73){
+      level = 2;
+    }
+    if(data == 74){
+      level = 3;
+    }
   };
   if(flikkeren == true){
-    if(i == true){
-      ioe.set_out_reg(0xF8);
-    }else {ioe.set_out_reg(0x00);}
+    if(i == true) ioe.set_out_reg(0xF8);
+    else ioe.set_out_reg(0x00);
   }
-  
+  if(aftellen == true){
+    if (delta_tijd3 > 1000){
+      vorige_tijd3 = millis();
+      if (char2!=0) char2--;
+      else if (char2==0){
+        if (char1!=0){
+          char1--;
+          char2 = 9;
+        }
+        else if (char1==0){
+          char1 = 0;
+          aftellen = false;
+          // digitalWrite(2, HIGH);
+          // delay(1000);
+          // digitalWrite(2, LOW);
+        }
+      }
+    }
+    seg1.write_value(char1);
+    seg2.write_value(char2);
+  }
 }
     
