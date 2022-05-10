@@ -3,7 +3,7 @@
 
 #include <SPI.h>
 #include <Arduino.h>
-// #include "HID-Project.h"
+#include "HID-Project.h"
 #include <math.h>
 #include "Wire.h"
 #include <Adafruit_MPU6050.h>
@@ -166,9 +166,9 @@ void loop() {
 
   // Geluidssensor --> P --> dingen oprapen
   // int g1, g2;
-  int val = analogRead(18);
+  int val = analogRead(19);
   // SerialUSB.println (val);
-  if(val<500 || val>580){
+  if(val<40 || val>1040){
 
     SerialUSB.println(21);
     delay(100);
@@ -236,7 +236,7 @@ void loop() {
 
     // ontvangt als iets vastgenomen in de game -> buzzer
     if(data == 48){
-        tone(2,10000,50);
+        tone(2,4000,50);
         // tone(2, 1, 500);
     }
 
