@@ -699,7 +699,7 @@ def delete_from_inventory(item):
 def mousemovement(vmouse):
     global r_speler
     beweging = vmouse
-    a = - 0.030 * beweging #lager constante = minder gevoelig
+    a = - 0.020 * beweging #lager constante = minder gevoelig
     r_speler_rot = np.array([r_speler[0], r_speler[1]])
     r_rot = np.array([[np.cos(a), np.sin(a)], [-np.sin(a), np.cos(a)]])
     r_speler = np.matmul(r_speler_rot, r_rot)
@@ -1144,5 +1144,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
-    
