@@ -10,7 +10,7 @@ from sdl2.sdlmixer import *
 import csv
 import serial
 
-ser = serial.Serial('COM6', 9600, timeout=0, writeTimeout=0)
+ser = serial.Serial('COM11', 9600, timeout=0, writeTimeout=0)
 ser.close()
 ser.open()
 
@@ -67,6 +67,7 @@ nameEntryText = ""
 starttimer = 0
 framerate = 0
 start_time_game = time.time()  # is voor de lifebar
+start_time_game2 = time.time()  #is om een seconde geen muisbeweging te doen na overgang level omdat buzzers IMU verstoren
 start_flikker_tijd = 0  # is voor de lifebar
 tijd_flikkeren_aan = 0  # is voor de lifebar
 flikkeren = True  # is voor de lifebar
@@ -629,6 +630,7 @@ def reset():
     global world_map
     global p_speler
     global start_time_game
+    global start_time_game2
     global flikkeren
     global level
     global game_over
@@ -642,6 +644,7 @@ def reset():
     if key_x or touch:
         game_over = False
         start_time_game = time.time()
+        start_time_game2 = time.time()
         key_x = False
         touch = False
         Mix_FadeOutChannel(2, 1000)
@@ -696,7 +699,7 @@ def delete_from_inventory(item):
 def mousemovement(vmouse):
     global r_speler
     beweging = vmouse
-    a = - 0.050 * beweging
+    a = - 0.030 * beweging #lager constante = minder gevoelig
     r_speler_rot = np.array([r_speler[0], r_speler[1]])
     r_rot = np.array([[np.cos(a), np.sin(a)], [-np.sin(a), np.cos(a)]])
     r_speler = np.matmul(r_speler_rot, r_rot)
@@ -713,6 +716,7 @@ def main():
     global starttimer
     global framerate
     global start_time_game
+    global start_time_game2
     global inventory
     global key_m
     global p_sprite_worldco
@@ -920,16 +924,6 @@ def main():
                 if (Element != ''):  # om fouten te voorkomen, mss overbodig?
                     proximity = int(Element)
                 Element = '0'
-            if (Element[0] == 'a'):
-                Element = Element[1:]
-                #print(Element) #heel soms kan hij het elemnet niet omzetten naar een float daarom dat ik het uitprint moest het mislopen
-                if(len(Element) != 0  or Element != '-'):  #om fouten te voorkomen, mss overbodig?
-                    xy = float(Element)
-                else: xy = 0
-                if(xy < 0.1 and xy > -0.1):
-                    xy = 0
-                mousemovement(xy)
-                Element = '0'
             if(Element == '11'):
                 key_up = True
             if(Element == '12'):
@@ -950,6 +944,22 @@ def main():
                 detectie_geluid = True
             if (Element == '19'):
                 touch = True
+            if (Element[0] == 'a'):
+                Element = Element[1:]
+                #print(Element) #heel soms kan hij het elemnet niet omzetten naar een float daarom dat ik het uitprint moest het mislopen
+                if(len(Element) != 0  or Element != '-'):  #om fouten te voorkomen, mss overbodig?
+                    xy = float(Element)
+                else: xy = 0
+                if(xy < 0.1 and xy > -0.1):
+                    xy = 0
+                if(time.time() - start_time_game2 <= 0.55): #levelovergang moet na minder dan een seconde weer op True
+                    xy = 0
+                    key_up = 0
+                    key_down = 0
+                    key_left = 0
+                    key_right = 0
+                mousemovement(xy)
+                Element = '0'
 
             inkomendeData.pop(0)
 
@@ -1000,6 +1010,7 @@ def main():
         # Start- en beginscherm + GAME OVER scherm
         if nameEntry:
             start_time_game = time.time()
+            start_time_game2 = time.time()
             teken_interruptscherm(renderer, startscherm)
             if int(1.5 * time.time()) % 2 == 0:
                 schrijftekst(chars, charpath, nameEntryText, 350, 340, renderer, 1)
@@ -1056,6 +1067,7 @@ def main():
                 sprites_bool = np.array([True, True, True, False, True, True])
                 key_m = False
                 start_time_game = time.time()
+                start_time_game2 = time.time()
                 Mix_PlayChannel(-1, levelup, 0)
                 ser.write(b'1')
             else:
@@ -1079,6 +1091,7 @@ def main():
                 sprites_bool = np.array([True, True, True, True, True, True])
                 key_m = False
                 start_time_game = time.time()
+                start_time_game2 = time.time()
                 Mix_PlayChannel(-1, levelup, 0)
                 ser.write(b'1')
 
