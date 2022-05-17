@@ -10,7 +10,7 @@ from sdl2.sdlmixer import *
 import csv
 import serial
 
-ser = serial.Serial('COM11', 9600, timeout=0, writeTimeout=0)
+ser = serial.Serial('COM6', 9600, timeout=0, writeTimeout=0)
 ser.close()
 ser.open()
 
@@ -38,6 +38,7 @@ key_right = False
 key_left = False
 detectie_geluid = False
 touch = False
+eindespel = False
 proximity = 1
 
 # positie van de speler
@@ -126,6 +127,7 @@ def verwerk_input():
     global detectie_geluid
     global proximity
     global touch
+    global eindespel
 
     # Handelt alle input events af die zich voorgedaan hebben sinds de vorige
     # keer dat we de sdl2.ext.get_events() functie hebben opgeroepen
@@ -134,7 +136,6 @@ def verwerk_input():
     if(proximity > 3):  #pas 25
         proximity = 25 # max snelheid
     speed = proximity*(0.35/25) #waarde 60 is afstand waar max snelheid van 0.4 is
-    # speed = 1/speed
     if key_up:
         if world_map[round(np.floor(p_speler[1] + speed * r_speler[1]))] \
                 [round(np.floor(p_speler[0] + speed * r_speler[0]))] == 0:
@@ -154,19 +155,28 @@ def verwerk_input():
             round(np.floor(p_speler[0] - speed * r_speler[1]))] == 0:
             p_speler[0] -= speed * r_speler[1]
             p_speler[1] += speed * r_speler[0]
-            #print("testrechts")
     if key_left:
         if world_map[round(np.floor(p_speler[1] - speed * r_speler[0]))][
             round(np.floor(p_speler[0] + speed * r_speler[1]))] == 0:
             p_speler[0] += speed * r_speler[1]
             p_speler[1] -= speed * r_speler[0]
-            #print("testlins")
     if detectie_geluid:
         p_pressed = True
         detectie_geluid = False
     if touch:
-        inventory_bekijken = not inventory_bekijken
-        touch = False
+        if nameEntry:
+            starttimer = time.time()
+            Mix_FadeOutChannel(1, 1000)
+            nameEntry = False
+            touch = False
+        elif eindespel:
+            if spacebar_pressed:
+                moet_afsluiten = True
+            spacebar_pressed = True
+            touch = False
+        else:
+            inventory_bekijken = not inventory_bekijken
+            touch = False
 
 
     events = sdl2.ext.get_events()
@@ -641,6 +651,7 @@ def reset():
     global inventory
     global play_music
     global proximity
+    global key_m
     if key_x or touch:
         game_over = False
         start_time_game = time.time()
@@ -657,6 +668,7 @@ def reset():
     p_sprite_worldco = np.array([[7.5, 7.5], [3.5, 3.5], [16, 20], [23, 22], [5, 7.5], [2.5, 7.5]])
     sprites_bool = np.array([True, True, False, False, True, True])
     inventory = []
+    key_m = False
 
 
 # 1. Als dicht genoeg in de buurt van sprite en op bepaald toets (p) gedrukt dan wordt functie pick_up opgeroepen
@@ -730,6 +742,7 @@ def main():
     global detectie_geluid
     global proximity
     global touch
+    global eindespel
     # Initialiseer de SDL2 bibliotheek
     sdl2.ext.init()
 
@@ -1047,7 +1060,7 @@ def main():
                             Mix_PlayChannel(-1, pickupsound, 0)
                             ser.write(b'0')
                 if int(1.5 * time.time()) % 2 == 0 and sprites_bool[x]:
-                    schrijftekst(chars, charpath, "Roep iets om vast te nemen", 130, 340, renderer, 1)
+                    schrijftekst(chars, charpath, "Blaas om vast te nemen", 175, 340, renderer, 1) #130,340
 
         if inventory_bekijken:
             teken_inventory(renderer=renderer)
@@ -1094,7 +1107,6 @@ def main():
                 start_time_game2 = time.time()
                 Mix_PlayChannel(-1, levelup, 0)
                 ser.write(b'1')
-
             else:
                 if int(1.5 * time.time()) % 2 == 0:
                     schrijftekst(chars, charpath, "Je hebt twee sleutels nodig", 170, 340, renderer, 1)
