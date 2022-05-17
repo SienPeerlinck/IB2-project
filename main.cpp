@@ -1,9 +1,6 @@
-//Door foutmelding moest ik adafruit busio installeren als library
-//dan moest ik SPI volgens het internet includen, omdat ik nog een andere bepaalde foutmelding kreeg
-
 #include <SPI.h>
 #include <Arduino.h>
-#include "HID-Project.h"
+// #include "HID-Project.h"
 #include <math.h>
 #include "Wire.h"
 #include <Adafruit_MPU6050.h>
@@ -76,36 +73,28 @@ void setup() {
   
   SerialUSB.begin(9600);
 
-  if (proximitySensor.begin() == false)
-  {
-    SerialUSB.println("Device not found. Please check wiring.");
-    while (1); //Freeze!
-  }
-
   while (!Serial){
     delay(10);
     SerialUSB.println("serialUSB not found");
   } 
+
+  if (proximitySensor.begin() == false){
+    SerialUSB.println("Failed to find Proximity sensor");
+    while (1); //Freeze!
+  }
+  
   if (!mpu.begin()) {
-    // SerialUSB.println("Failed to find MPU6050 chip");
-    while (1) {
-      delay(10);
-      SerialUSB.println("failed");
-    }
+    SerialUSB.println("Failed to find MPU6050 chip");
+    while (1); //Freeze!
   }
-  if(digitalRead(24)==LOW){
-    touch_gedrukt = false;
-  } else {
-    touch_gedrukt = true;
-  }
+
+  if(digitalRead(24)==LOW) touch_gedrukt = false;
+  else touch_gedrukt = true;
   seg1.write_value(17);
   seg2.write_value(level);
 }
 
 void loop() {
-
-
-
   tijd1 = millis();
   tijd2 = millis();
   tijd3 = millis();
@@ -132,14 +121,9 @@ void loop() {
   }
   
   if(delta_tijd1 >= 60){
-    // SerialUSB.println(digitalRead(3)); DEZE DOET HET NIET?
-
-
     // PROXIMITY SENSOR:
     unsigned int proxValue = proximitySensor.getProximity();
     SerialUSB.println('p'+ String(proxValue));
-    //SerialUSB.println(proxValue);
-
       // 100 is ongeveer 1 decimeter weg
       //  30 is ongeveer 2 decimeter
       //  10 is ongeveer 3 decimeter
@@ -149,8 +133,6 @@ void loop() {
     sensors_event_t a, g, temp;
     mpu.getEvent(&a, &g, &temp);
     SerialUSB.println("a"+String(a.acceleration.x-0.43));
-    //SerialUSB.println(a.acceleration.x-0.43);
-
       // 0.43 is horizontaal
       // 10.4 is volledig naar links
       // 9.6  is volledig naar rechts
@@ -164,17 +146,11 @@ void loop() {
     }
   }
 
-  // Geluidssensor --> P --> dingen oprapen
-  // int g1, g2;
+  // Geluidssensor --> dingen oprapen
   int val = analogRead(19);
-  // SerialUSB.println (val);
   if(val<40 || val>1040){
-
     SerialUSB.println(21);
     delay(100);
-  }
-  else{
-    // Keyboard.release(KEY_P);
   }
 
   // Button op sensor slot 1 --> key up --> Vooruitgaan
@@ -218,18 +194,11 @@ void loop() {
     SerialUSB.println(19);
     touch_gedrukt = false;
   }
-  // tone(2,200);
-  // delay(400);
-  // tone(2,400,300);
 
     // see if there's incoming serial data:
   if (SerialUSB.available() > 0) {
-   
-    // !!!
-   
-    // DE DATA DIE IN PYTHON IS DOORGESTUURD VERANDERD VAN DECIMAAL NAAR UTF8, CONVERSIE KAN JE OP VOLGENDE SITE DOEN:
+    // DE DATA DIE IN PYTHON IS DOORGESTUURD VERANDERT VAN DECIMAAL NAAR UTF8, CONVERSIE KAN JE OP VOLGENDE SITE DOEN:
     // https://onlineutf8tools.com/convert-utf8-to-decimal
-   
     
     // read the oldest byte in the serial buffer:
     data = SerialUSB.read();
@@ -237,7 +206,6 @@ void loop() {
     // ontvangt als iets vastgenomen in de game -> buzzer
     if(data == 48){
         tone(2,4000,50);
-        // tone(2, 1, 500);
     }
 
     // ontvangt als door portal --> vibrator 1 trilt
@@ -252,6 +220,7 @@ void loop() {
         digitalWrite(9,HIGH);
     }
 
+    // LED-array
     if(data == 65) {
       ioe.set_out_reg(0xF8); //allemaal aan
       flikkeren = false;
@@ -297,11 +266,14 @@ void loop() {
     if(data == 74){
       level = 3;
     }
-  };
+  }
+
   if(flikkeren == true){
     if(i == true) ioe.set_out_reg(0xF8);
     else ioe.set_out_reg(0x00);
   }
+
+  // Teller 7-segmentDisplay
   if(aftellen == true){
     if (delta_tijd3 > 1000){
       vorige_tijd3 = millis();
@@ -314,9 +286,7 @@ void loop() {
         else if (char1==0){
           char1 = 0;
           aftellen = false;
-          // digitalWrite(2, HIGH);
-          // delay(1000);
-          // digitalWrite(2, LOW);
+
         }
       }
     }
